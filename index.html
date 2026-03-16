@@ -1,35 +1,1564 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quran Tracker</title>
-  <style>
-    body{
-      margin:0;
-      font-family:Arial,sans-serif;
-      background:#0b1020;
-      color:#fff;
-      display:flex;
-      min-height:100vh;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-    }
-    .box{
-      padding:24px;
-      border-radius:16px;
-      background:#121a2f;
-      box-shadow:0 10px 30px rgba(0,0,0,.3);
-    }
-    h1{margin:0 0 12px}
-    p{margin:0;color:#cfd6e4}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#D4A843">
+<meta name="description" content="تطبيق لتتبع حفظ ومراجعة القرآن الكريم">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>متتبع حفظ القرآن الكريم</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #D4A843;
+  --gold-light: #E8C96A;
+  --gold-dark: #B8892E;
+  --bg-deep: #0A0E1A;
+  --bg-card: #111827;
+  --text-primary: #F1F0EB;
+  --text-secondary: #8B9AB5;
+  --green: #2DD4A8;
+  --green-dark: #0D9373;
+  --emerald: #10B981;
+  --blue: #60A5FA;
+  --blue-dark: #3B82F6;
+  --border: rgba(212, 168, 67, 0.15);
+  --shadow-gold: rgba(212, 168, 67, 0.08);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Unit Toggle for Ayah/Page selection */
+.entry-unit-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.unit-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(212, 168, 67, 0.06);
+  color: var(--text-secondary);
+  border-color: rgba(212, 168, 67, 0.15);
+}
+
+.unit-btn.active {
+  background: rgba(212, 168, 67, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(212, 168, 67, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(45, 212, 168, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+
+/* Install Banner */
+.install-banner {
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.1), rgba(212, 168, 67, 0.05));
+  border: 1px solid rgba(212, 168, 67, 0.25);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  animation: fadeUp 0.5s ease;
+}
+
+.install-banner.show { display: flex; }
+
+.install-banner-text { flex: 1; }
+.install-banner-text strong { color: var(--gold); font-size: 0.95rem; }
+.install-banner-text p { color: var(--text-secondary); font-size: 0.8rem; margin-top: 2px; }
+
+.install-btn {
+  padding: 8px 18px;
+  background: var(--gold);
+  color: #0A0E1A;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.install-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Header */
+.header { text-align: center; padding: 30px 16px 20px; }
+
+.header::after {
+  content: '﷽';
+  display: block;
+  font-family: 'Amiri', serif;
+  /* Reduce the basmala size to make it subtler in the interface */
+  font-size: 1.2rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.header h1 {
+  font-family: 'Amiri', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.header p { color: var(--text-secondary); font-size: 1rem; font-weight: 300; }
+
+.divider {
+  display: flex; align-items: center; justify-content: center; gap: 15px;
+  margin: 20px 0; opacity: 0.5;
+}
+.divider::before, .divider::after {
+  content: ''; height: 1px; width: 80px;
+  background: linear-gradient(to left, transparent, var(--gold), transparent);
+}
+.divider span { color: var(--gold); font-size: 1.3rem; }
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 100;
+  padding-bottom: var(--safe-bottom);
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 12px 8px 10px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s;
+  position: relative;
+}
+
+.nav-btn .nav-icon { font-size: 1.3rem; }
+
+.nav-btn.active {
+  color: var(--gold);
+}
+
+.nav-btn.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 0 0 2px 2px;
+}
+
+/* Pages */
+.page { display: none; animation: fadeUp 0.4s ease; }
+.page.active { display: block; }
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 10px;
+  text-align: center;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  opacity: 0; transition: opacity 0.3s;
+}
+
+.stat-card:active::before { opacity: 1; }
+.stat-card.new-type::before { background: var(--green); }
+.stat-card.review-type::before { background: var(--blue); }
+.stat-card.gold-type::before { background: var(--gold); }
+.stat-card.streak-type::before { background: #FBBF24; }
+
+.stat-icon { font-size: 1.4rem; margin-bottom: 6px; display: block; }
+.stat-value { font-size: 1.7rem; font-weight: 800; line-height: 1.2; }
+.stat-value.new-c { color: var(--green); }
+.stat-value.review-c { color: var(--blue); }
+.stat-value.gold-c { color: var(--gold-light); }
+.stat-value.streak-c { color: #FBBF24; }
+.stat-label { color: var(--text-secondary); font-size: 0.72rem; margin-top: 3px; }
+
+.stat-card.wide { grid-column: span 3; }
+.stat-card.wide .stat-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 4px 0;
+}
+.stat-card.wide .stat-item { text-align: center; }
+
+/* Review Alert */
+.review-alert {
+  background: rgba(96, 165, 250, 0.06);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+.review-alert.show { display: flex; }
+.review-alert-icon { font-size: 1.3rem; }
+.review-alert-text { flex: 1; }
+.review-alert-text strong { color: var(--blue); font-size: 0.9rem; }
+.review-alert-text p { color: var(--text-secondary); font-size: 0.78rem; margin-top: 2px; }
+
+/* Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 18px;
+}
+
+.card-title {
+  font-family: 'Amiri', serif;
+  font-size: 1.25rem;
+  color: var(--gold);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Entry Type Toggle */
+.entry-type-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+
+.type-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.type-btn.new-btn { background: rgba(45, 212, 168, 0.06); color: var(--text-secondary); border-color: rgba(45, 212, 168, 0.15); }
+.type-btn.new-btn.active { background: rgba(45, 212, 168, 0.15); border-color: var(--green); color: var(--green); }
+.type-btn.review-btn { background: rgba(96, 165, 250, 0.06); color: var(--text-secondary); border-color: rgba(96, 165, 250, 0.15); }
+.type-btn.review-btn.active { background: rgba(96, 165, 250, 0.15); border-color: var(--blue); color: var(--blue); }
+
+/* Quality */
+.quality-section { margin-bottom: 16px; display: none; }
+.quality-section.show { display: block; }
+
+.quality-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+.quality-btn {
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+.quality-btn .emoji { font-size: 1.2rem; display: block; margin-bottom: 3px; }
+.quality-btn.active { border-color: var(--blue); background: rgba(96, 165, 250, 0.12); color: var(--blue); }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px; font-weight: 500; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+select, input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 16px; /* Prevents zoom on iOS */
+  transition: all 0.3s;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+select:focus, input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.1); }
+select option { background: var(--bg-card); color: var(--text-primary); }
+input[type="date"] { color-scheme: dark; }
+
+.btn-save {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 6px;
+}
+
+.btn-save.new-save { background: linear-gradient(135deg, var(--green-dark), var(--green)); color: #0A0E1A; }
+.btn-save.review-save { background: linear-gradient(135deg, var(--blue-dark), var(--blue)); color: #0A0E1A; }
+.btn-save:active { transform: scale(0.98); }
+
+/* Progress */
+.progress-section { display: flex; flex-direction: column; align-items: center; }
+
+.progress-ring-container { position: relative; width: 190px; height: 190px; margin-bottom: 18px; }
+.progress-ring { transform: rotate(-90deg); }
+.progress-ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 10; }
+.progress-ring-new { fill: none; stroke: url(#greenGrad); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.progress-ring-review { fill: none; stroke: url(#blueGrad); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.5; }
+
+.progress-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.progress-percent { font-size: 2.4rem; font-weight: 800; color: var(--gold-light); line-height: 1; }
+.progress-label { color: var(--text-secondary); font-size: 0.78rem; margin-top: 4px; }
+
+.info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
+.info-item { text-align: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; }
+.info-item .num { font-size: 1.3rem; font-weight: 700; color: var(--emerald); }
+.info-item .num.blue { color: var(--blue); }
+.info-item .lbl { color: var(--text-secondary); font-size: 0.72rem; margin-top: 2px; }
+
+.review-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  width: 100%;
+}
+.rev-item { text-align: center; padding: 10px; background: rgba(96, 165, 250, 0.05); border-radius: 10px; border: 1px solid rgba(96, 165, 250, 0.08); }
+.rev-item .rv { font-size: 1.2rem; font-weight: 700; color: var(--blue); }
+.rev-item .rl { font-size: 0.68rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* Charts */
+.chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 160px; padding: 8px 0; gap: 4px; }
+
+.chart-bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+
+.chart-bars { display: flex; gap: 2px; align-items: flex-end; width: 100%; justify-content: center; }
+.chart-bar { width: 14px; min-height: 3px; border-radius: 5px 5px 2px 2px; transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); }
+.chart-bar.bar-new { background: linear-gradient(180deg, var(--green), var(--green-dark)); }
+.chart-bar.bar-review { background: linear-gradient(180deg, var(--blue), var(--blue-dark)); }
+
+.chart-value { font-size: 0.65rem; font-weight: 600; margin-bottom: 3px; display: flex; gap: 4px; }
+.chart-value .cv-new { color: var(--green); }
+.chart-value .cv-review { color: var(--blue); }
+.chart-label { color: var(--text-secondary); font-size: 0.68rem; margin-top: 5px; font-weight: 500; }
+
+.chart-legend { display: flex; justify-content: center; gap: 16px; margin-top: 12px; font-size: 0.75rem; color: var(--text-secondary); }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot-new { width: 8px; height: 8px; border-radius: 3px; background: var(--green); }
+.legend-dot-review { width: 8px; height: 8px; border-radius: 3px; background: var(--blue); }
+
+/* History */
+.history-filters { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.filter-btn {
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.filter-btn.active { background: rgba(212, 168, 67, 0.15); border-color: var(--gold); color: var(--gold-light); }
+
+.history-list { max-height: 500px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--gold-dark) transparent; }
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.2s;
+}
+.history-item:active { background: rgba(255,255,255,0.04); }
+
+.h-badge {
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.badge-new { background: rgba(45, 212, 168, 0.12); color: var(--green); }
+.badge-review { background: rgba(96, 165, 250, 0.12); color: var(--blue); }
+
+.h-content { flex: 1; min-width: 0; }
+.h-surah { font-weight: 600; font-size: 0.88rem; }
+.h-date { color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px; }
+
+.h-ayat {
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.h-ayat.new-a { color: var(--green); background: rgba(45, 212, 168, 0.08); }
+.h-ayat.review-a { color: var(--blue); background: rgba(96, 165, 250, 0.08); }
+
+.h-quality { font-size: 0.9rem; flex-shrink: 0; }
+
+.h-del {
+  background: none; border: none; color: rgba(239, 68, 68, 0.4); cursor: pointer;
+  font-size: 0.9rem; padding: 6px; border-radius: 6px; flex-shrink: 0;
+}
+.h-edit {
+  background: none; border: none; color: rgba(212, 168, 67, 0.5); cursor: pointer;
+  font-size: 0.9rem; padding: 6px; border-radius: 6px; flex-shrink: 0;
+  transition: color 0.2s;
+}
+.h-edit:active { color: var(--gold); }
+.edit-mode-banner {
+  background: rgba(212, 168, 67, 0.08);
+  border: 1px solid rgba(212, 168, 67, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--gold-light);
+}
+.edit-mode-banner.show { display: flex; }
+.edit-cancel-btn {
+  margin-right: auto;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: rgba(239,68,68,0.8);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-state { text-align: center; padding: 36px 16px; color: var(--text-secondary); }
+.empty-state span { font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+/* Settings */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.setting-item:last-child { border: none; }
+.setting-label { font-weight: 600; font-size: 0.95rem; }
+.setting-desc { color: var(--text-secondary); font-size: 0.8rem; margin-top: 3px; }
+
+.btn-setting {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+}
+.btn-setting:active { background: rgba(255,255,255,0.08); }
+.btn-setting.danger { border-color: rgba(239, 68, 68, 0.2); color: rgba(239, 68, 68, 0.7); }
+
+.app-version {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 20px 0 10px;
+  opacity: 0.6;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--bg-card);
+  border: 1px solid var(--gold);
+  color: var(--gold-light);
+  padding: 12px 24px;
+  border-radius: 14px;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  z-index: 200;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  max-width: 90%;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(212, 168, 67, 0.3); border-radius: 4px; }
+
+/* Cross Reference */
+.cross-ref-info { margin-bottom: 14px; }
+.info-badge {
+  background: rgba(212, 168, 67, 0.07);
+  border: 1px solid rgba(212, 168, 67, 0.22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.8;
+}
+.info-badge .ref-body { flex: 1; }
+.info-badge .ref-surah { color: var(--gold-light); font-weight: 700; }
+.info-badge .ref-ayah  { color: var(--text-primary); font-weight: 600; }
+.h-ref {
+  font-size: 0.72rem; color: var(--text-secondary);
+  background: rgba(212,168,67,0.07); border: 1px solid rgba(212,168,67,0.15);
+  border-radius: 6px; padding: 2px 7px; flex-shrink: 0; white-space: nowrap;
+}
+</style>
 </head>
 <body>
-  <div class="box">
-    <h1>متتبع حفظ القرآن</h1>
-    <p>الموقع يعمل. المشكلة كانت في التعديل الأخير.</p>
+
+<div class="app">
+  <!-- Install Banner -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-banner-text">
+      <strong>📲 تثبيت التطبيق</strong>
+      <p>أضف التطبيق للشاشة الرئيسية للوصول السريع</p>
+    </div>
+    <button class="install-btn" id="installBtn" onclick="installApp()">تثبيت</button>
+    <button class="install-dismiss" onclick="dismissInstall()">✕</button>
   </div>
+
+  <header class="header">
+    <h1>متتبع حفظ القرآن</h1>
+    <p>حفظ ومراجعة كتاب الله</p>
+  </header>
+  <div class="divider"><span>✦</span></div>
+
+  <!-- ========= PAGE: HOME ========= -->
+  <div class="page active" id="pageHome">
+    <div class="review-alert" id="reviewAlert">
+      <div class="review-alert-icon">🔔</div>
+      <div class="review-alert-text">
+        <strong>تذكير بالمراجعة</strong>
+        <p id="reviewAlertText"></p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card new-type">
+        <span class="stat-icon">📖</span>
+        <div class="stat-value new-c" id="todayNew">0</div>
+        <div class="stat-label">حفظ اليوم</div>
+      </div>
+      <div class="stat-card review-type">
+        <span class="stat-icon">🔄</span>
+        <div class="stat-value review-c" id="todayReview">0</div>
+        <div class="stat-label">مراجعة اليوم</div>
+      </div>
+      <div class="stat-card streak-type">
+        <span class="stat-icon">🔥</span>
+        <div class="stat-value streak-c" id="streakCount">0</div>
+        <div class="stat-label">أيام متتالية</div>
+      </div>
+
+      <div class="stat-card wide gold-type">
+        <div class="stat-inner">
+          <div class="stat-item">
+            <div class="stat-value new-c" style="font-size:1.4rem" id="weekNew">0</div>
+            <div class="stat-label">حفظ الأسبوع</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value review-c" style="font-size:1.4rem" id="weekReview">0</div>
+            <div class="stat-label">مراجعة الأسبوع</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value new-c" style="font-size:1.4rem" id="monthNew">0</div>
+            <div class="stat-label">حفظ الشهر</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value review-c" style="font-size:1.4rem" id="monthReview">0</div>
+            <div class="stat-label">مراجعة الشهر</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly Chart -->
+    <div class="card">
+      <h2 class="card-title">📊 أداء الأسبوع</h2>
+      <div class="chart-container" id="weeklyChart"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot-new"></span> حفظ</div>
+        <div class="legend-item"><span class="legend-dot-review"></span> مراجعة</div>
+      </div>
+    </div>
+
+    <!-- Monthly Chart -->
+    <div class="card">
+      <h2 class="card-title">📈 أداء الشهر</h2>
+      <div class="chart-container" id="monthlyChart" style="height:140px"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot-new"></span> حفظ</div>
+        <div class="legend-item"><span class="legend-dot-review"></span> مراجعة</div>
+      </div>
+    </div>
+
+    <!-- Yearly Chart -->
+    <!-- هذا القسم الجديد يعرض تقريراً سنوياً لنشاط الحفظ والمراجعة على مدار 12 شهراً -->
+    <div class="card">
+      <h2 class="card-title">📅 أداء السنة</h2>
+      <div class="chart-container" id="yearlyChart" style="height:160px"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot-new"></span> حفظ</div>
+        <div class="legend-item"><span class="legend-dot-review"></span> مراجعة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= PAGE: ADD ========= -->
+  <div class="page" id="pageAdd">
+    <div class="card">
+      <div class="edit-mode-banner" id="editBanner">
+        ✏️ <span id="editBannerText">وضع التعديل</span>
+        <button class="edit-cancel-btn" onclick="cancelEdit()">✕ إلغاء</button>
+      </div>
+      <h2 class="card-title" id="formTitle">📝 تسجيل جديد</h2>
+      <div class="entry-type-toggle">
+        <button class="type-btn new-btn active" onclick="setEntryType('new')">📖 حفظ جديد</button>
+        <button class="type-btn review-btn" onclick="setEntryType('review')">🔄 مراجعة</button>
+      </div>
+      <!-- Unit toggle: choose between recording by ayah or by page -->
+      <div class="entry-unit-toggle">
+        <button class="unit-btn ayah-btn active" onclick="setUnitType('ayah')">📑 بالآية</button>
+        <button class="unit-btn page-btn" onclick="setUnitType('page')">📄 بالصفحة</button>
+      </div>
+
+      <div class="form-group">
+        <label>السورة</label>
+        <select id="surahSelect"></select>
+      </div>
+      <!-- Ayah fields (default visible) -->
+      <div class="form-row" id="ayahFields">
+        <div class="form-group">
+          <label>من آية</label>
+          <input type="number" id="fromAyah" min="1" value="1" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label>إلى آية</label>
+          <input type="number" id="toAyah" min="1" value="5" inputmode="numeric">
+        </div>
+      </div>
+      <div class="cross-ref-info" id="ayahPageInfo" style="display:none">
+        <div class="info-badge"><span>📄</span><span class="ref-body" id="ayahPageBody"></span></div>
+      </div>
+      <!-- Page fields (hidden initially) -->
+      <div class="form-row" id="pageFields" style="display:none">
+        <div class="form-group">
+          <label>من صفحة</label>
+          <input type="number" id="fromPage" min="1" value="1" max="604" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label>إلى صفحة</label>
+          <input type="number" id="toPage" min="1" value="1" max="604" inputmode="numeric">
+        </div>
+      </div>
+      <div class="cross-ref-info" id="pageAyahInfo" style="display:none">
+        <div class="info-badge"><span>📑</span><span class="ref-body" id="pageAyahBody"></span></div>
+      </div>
+
+      <div class="quality-section" id="qualitySection">
+        <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:8px;font-weight:500">مستوى الإتقان</label>
+        <div class="quality-options">
+          <button class="quality-btn" onclick="setQuality('excellent',this)"><span class="emoji">⭐</span>ممتاز</button>
+          <button class="quality-btn" onclick="setQuality('good',this)"><span class="emoji">👍</span>جيد</button>
+          <button class="quality-btn" onclick="setQuality('fair',this)"><span class="emoji">📝</span>مقبول</button>
+          <button class="quality-btn active" onclick="setQuality('weak',this)"><span class="emoji">🔁</span>تكرار</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>التاريخ</label>
+        <input type="date" id="entryDate">
+      </div>
+      <div class="form-group">
+        <label>ملاحظات (اختياري)</label>
+        <input type="text" id="notes" placeholder="ملاحظات...">
+      </div>
+      <button class="btn-save new-save" id="saveBtn" onclick="saveEntry()">💾 حفظ السجل</button>
+    </div>
+  </div>
+
+  <!-- ========= PAGE: PROGRESS ========= -->
+  <div class="page" id="pageProgress">
+    <div class="card progress-section">
+      <h2 class="card-title">🎯 نسبة الإنجاز الكلية</h2>
+      <div class="progress-ring-container">
+        <svg class="progress-ring" width="190" height="190" viewBox="0 0 190 190">
+          <defs>
+            <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#2DD4A8"/><stop offset="100%" style="stop-color:#10B981"/>
+            </linearGradient>
+            <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#60A5FA"/><stop offset="100%" style="stop-color:#3B82F6"/>
+            </linearGradient>
+          </defs>
+          <circle class="progress-ring-bg" cx="95" cy="95" r="80"/>
+          <circle class="progress-ring-review" id="ringReview" cx="95" cy="95" r="70" stroke-dasharray="440" stroke-dashoffset="440"/>
+          <circle class="progress-ring-new" id="ringNew" cx="95" cy="95" r="80" stroke-dasharray="503" stroke-dashoffset="503"/>
+        </svg>
+        <div class="progress-center">
+          <div class="progress-percent" id="progressPercent">0%</div>
+          <div class="progress-label">حفظ من القرآن</div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item"><div class="num" id="totalMemorized">0</div><div class="lbl">آية محفوظة</div></div>
+        <div class="info-item"><div class="num blue" id="totalReviewed">0</div><div class="lbl">آية مُراجعة</div></div>
+        <div class="info-item"><div class="num" id="avgPerDay">0</div><div class="lbl">معدل يومي</div></div>
+        <div class="info-item"><div class="num" id="daysActive">0</div><div class="lbl">يوم نشاط</div></div>
+      </div>
+
+      <div class="review-summary">
+        <div class="rev-item"><div class="rv" id="excellentCount">0</div><div class="rl">⭐ ممتاز</div></div>
+        <div class="rev-item"><div class="rv" id="goodCount">0</div><div class="rl">👍 جيد</div></div>
+        <div class="rev-item"><div class="rv" id="weakCount">0</div><div class="rl">🔁 تكرار</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========= PAGE: HISTORY ========= -->
+  <div class="page" id="pageHistory">
+    <div class="card">
+      <h2 class="card-title">📋 السجل</h2>
+      <div class="history-filters">
+        <button class="filter-btn active" onclick="filterHistory('all',this)">الكل</button>
+        <button class="filter-btn" onclick="filterHistory('today',this)">اليوم</button>
+        <button class="filter-btn" onclick="filterHistory('week',this)">الأسبوع</button>
+        <button class="filter-btn" onclick="filterHistory('month',this)">الشهر</button>
+        <button class="filter-btn" onclick="filterHistory('new-only',this)">حفظ</button>
+        <button class="filter-btn" onclick="filterHistory('review-only',this)">مراجعة</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- ========= PAGE: SETTINGS ========= -->
+  <div class="page" id="pageSettings">
+    <div class="card">
+      <h2 class="card-title">⚙️ الإعدادات</h2>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">📤 تصدير البيانات</div>
+          <div class="setting-desc">حفظ نسخة احتياطية من بياناتك</div>
+        </div>
+        <button class="btn-setting" onclick="exportData()">تصدير</button>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">📥 استيراد البيانات</div>
+          <div class="setting-desc">استعادة من نسخة احتياطية</div>
+        </div>
+        <button class="btn-setting" onclick="importData()">استيراد</button>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">🗑️ مسح البيانات</div>
+          <div class="setting-desc">حذف جميع السجلات نهائياً</div>
+        </div>
+        <button class="btn-setting danger" onclick="clearAllData()">مسح</button>
+      </div>
+    </div>
+    <div class="app-version">متتبع حفظ القرآن الكريم — الإصدار 2.0</div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showPage('pageHome', this)"><span class="nav-icon">🏠</span>الرئيسية</button>
+  <button class="nav-btn" onclick="showPage('pageAdd', this)"><span class="nav-icon">✏️</span>تسجيل</button>
+  <button class="nav-btn" onclick="showPage('pageProgress', this)"><span class="nav-icon">🎯</span>التقدم</button>
+  <button class="nav-btn" onclick="showPage('pageHistory', this)"><span class="nav-icon">📋</span>السجل</button>
+  <button class="nav-btn" onclick="showPage('pageSettings', this)"><span class="nav-icon">⚙️</span>إعدادات</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================================================
+// جدول صفحات مصحف المدينة النبوية - 604 صفحة كاملة
+// المصدر: فهرس Gemini المبني على quran.com
+// كل عنصر: [سورة_البداية, آية_البداية, سورة_النهاية, آية_النهاية]
+// =====================================================
+const PAGE_MAP=[
+  [1,1,1,7],[2,1,2,5],[2,6,2,16],[2,17,2,24],[2,25,2,29],[2,30,2,37],[2,38,2,48],[2,49,2,57],
+  [2,58,2,61],[2,62,2,69],[2,70,2,76],[2,77,2,83],[2,84,2,88],[2,89,2,93],[2,94,2,101],[2,102,2,105],
+  [2,106,2,112],[2,113,2,119],[2,120,2,126],[2,127,2,134],[2,135,2,141],[2,142,2,145],[2,146,2,153],[2,154,2,163],
+  [2,164,2,169],[2,170,2,176],[2,177,2,181],[2,182,2,186],[2,187,2,190],[2,191,2,196],[2,197,2,202],[2,203,2,210],
+  [2,211,2,215],[2,216,2,219],[2,220,2,224],[2,225,2,230],[2,231,2,233],[2,234,2,237],[2,238,2,245],[2,246,2,248],
+  [2,249,2,252],[2,253,2,256],[2,257,2,259],[2,260,2,264],[2,265,2,269],[2,270,2,274],[2,275,2,281],[2,282,2,282],
+  [2,283,2,286],[3,1,3,9],[3,10,3,15],[3,16,3,22],[3,23,3,29],[3,30,3,37],[3,38,3,45],[3,46,3,52],
+  [3,53,3,61],[3,62,3,70],[3,71,3,77],[3,78,3,83],[3,84,3,91],[3,92,3,100],[3,101,3,108],[3,109,3,115],
+  [3,116,3,121],[3,122,3,132],[3,133,3,140],[3,141,3,148],[3,149,3,153],[3,154,3,157],[3,158,3,165],[3,166,3,173],
+  [3,174,3,180],[3,181,3,186],[3,187,3,194],[3,195,3,200],[4,1,4,6],[4,7,4,11],[4,12,4,14],[4,15,4,19],
+  [4,20,4,23],[4,24,4,26],[4,27,4,33],[4,34,4,37],[4,38,4,44],[4,45,4,51],[4,52,4,59],[4,60,4,65],
+  [4,66,4,74],[4,75,4,79],[4,80,4,86],[4,87,4,91],[4,92,4,94],[4,95,4,101],[4,102,4,105],[4,106,4,113],
+  [4,114,4,121],[4,122,4,127],[4,128,4,134],[4,135,4,140],[4,141,4,147],[4,148,4,154],[4,155,4,162],[4,163,4,170],
+  [4,171,4,175],[4,176,5,2],[5,3,5,5],[5,6,5,9],[5,10,5,13],[5,14,5,17],[5,18,5,23],[5,24,5,31],
+  [5,32,5,36],[5,37,5,41],[5,42,5,45],[5,46,5,50],[5,51,5,57],[5,58,5,64],[5,65,5,70],[5,71,5,76],
+  [5,77,5,82],[5,83,5,89],[5,90,5,95],[5,96,5,103],[5,104,5,108],[5,109,5,113],[5,114,5,120],[6,1,6,8],
+  [6,9,6,18],[6,19,6,27],[6,28,6,35],[6,36,6,44],[6,45,6,52],[6,53,6,59],[6,60,6,68],[6,69,6,73],
+  [6,74,6,81],[6,82,6,90],[6,91,6,94],[6,95,6,101],[6,102,6,110],[6,111,6,118],[6,119,6,124],[6,125,6,131],
+  [6,132,6,137],[6,138,6,142],[6,143,6,146],[6,147,6,151],[6,152,6,157],[6,158,6,165],[7,1,7,11],[7,12,7,22],
+  [7,23,7,30],[7,31,7,37],[7,38,7,43],[7,44,7,51],[7,52,7,57],[7,58,7,67],[7,68,7,73],[7,74,7,81],
+  [7,82,7,87],[7,88,7,95],[7,96,7,104],[7,105,7,120],[7,121,7,130],[7,131,7,137],[7,138,7,143],[7,144,7,149],
+  [7,150,7,155],[7,156,7,159],[7,160,7,163],[7,164,7,170],[7,171,7,178],[7,179,7,187],[7,188,7,195],[7,196,7,206],
+  [8,1,8,8],[8,9,8,16],[8,17,8,25],[8,26,8,33],[8,34,8,40],[8,41,8,45],[8,46,8,52],[8,53,8,61],
+  [8,62,8,69],[8,70,8,75],[9,1,9,6],[9,7,9,13],[9,14,9,20],[9,21,9,26],[9,27,9,31],[9,32,9,36],
+  [9,37,9,40],[9,41,9,47],[9,48,9,54],[9,55,9,61],[9,62,9,68],[9,69,9,72],[9,73,9,79],[9,80,9,86],
+  [9,87,9,93],[9,94,9,99],[9,100,9,106],[9,107,9,111],[9,112,9,117],[9,118,9,122],[9,123,9,129],[10,1,10,6],
+  [10,7,10,14],[10,15,10,20],[10,21,10,25],[10,26,10,33],[10,34,10,42],[10,43,10,53],[10,54,10,61],[10,62,10,70],
+  [10,71,10,78],[10,79,10,88],[10,89,10,97],[10,98,10,106],[10,107,11,5],[11,6,11,12],[11,13,11,19],[11,20,11,28],
+  [11,29,11,37],[11,38,11,45],[11,46,11,53],[11,54,11,62],[11,63,11,71],[11,72,11,81],[11,82,11,88],[11,89,11,97],
+  [11,98,11,108],[11,109,11,117],[11,118,12,4],[12,5,12,14],[12,15,12,22],[12,23,12,30],[12,31,12,37],[12,38,12,43],
+  [12,44,12,52],[12,53,12,63],[12,64,12,69],[12,70,12,78],[12,79,12,86],[12,87,12,95],[12,96,12,103],[12,104,12,111],
+  [13,1,13,5],[13,6,13,13],[13,14,13,18],[13,19,13,28],[13,29,13,34],[13,35,13,42],[13,43,14,5],[14,6,14,10],
+  [14,11,14,18],[14,19,14,24],[14,25,14,33],[14,34,14,42],[14,43,14,52],[15,1,15,15],[15,16,15,31],[15,32,15,51],
+  [15,52,15,70],[15,71,15,90],[15,91,16,6],[16,7,16,14],[16,15,16,26],[16,27,16,34],[16,35,16,42],[16,43,16,54],
+  [16,55,16,64],[16,65,16,72],[16,73,16,79],[16,80,16,87],[16,88,16,93],[16,94,16,102],[16,103,16,110],[16,111,16,118],
+  [16,119,16,128],[17,1,17,7],[17,8,17,17],[17,18,17,27],[17,28,17,38],[17,39,17,49],[17,50,17,58],[17,59,17,66],
+  [17,67,17,75],[17,76,17,86],[17,87,17,96],[17,97,17,104],[17,105,18,4],[18,5,18,15],[18,16,18,20],[18,21,18,27],
+  [18,28,18,34],[18,35,18,45],[18,46,18,53],[18,54,18,61],[18,62,18,74],[18,75,18,83],[18,84,18,97],[18,98,18,110],
+  [19,1,19,11],[19,12,19,25],[19,26,19,38],[19,39,19,51],[19,52,19,64],[19,65,19,76],[19,77,19,95],[19,96,20,12],
+  [20,13,20,37],[20,38,20,51],[20,52,20,64],[20,65,20,76],[20,77,20,87],[20,88,20,98],[20,99,20,113],[20,114,20,125],
+  [20,126,20,135],[21,1,21,10],[21,11,21,24],[21,25,21,35],[21,36,21,44],[21,45,21,57],[21,58,21,72],[21,73,21,81],
+  [21,82,21,90],[21,91,21,101],[21,102,21,112],[22,1,22,5],[22,6,22,15],[22,16,22,23],[22,24,22,30],[22,31,22,38],
+  [22,39,22,46],[22,47,22,55],[22,56,22,64],[22,65,22,72],[22,73,22,78],[23,1,23,17],[23,18,23,27],[23,28,23,42],
+  [23,43,23,59],[23,60,23,74],[23,75,23,89],[23,90,23,104],[23,105,23,118],[24,1,24,10],[24,11,24,20],[24,21,24,27],
+  [24,28,24,31],[24,32,24,36],[24,37,24,43],[24,44,24,53],[24,54,24,58],[24,59,24,61],[24,62,25,2],[25,3,25,11],
+  [25,12,25,20],[25,21,25,32],[25,33,25,43],[25,44,25,55],[25,56,25,67],[25,68,25,77],[26,1,26,19],[26,20,26,39],
+  [26,40,26,60],[26,61,26,83],[26,84,26,111],[26,112,26,136],[26,137,26,159],[26,160,26,183],[26,184,26,206],[26,207,26,227],
+  [27,1,27,13],[27,14,27,22],[27,23,27,35],[27,36,27,44],[27,45,27,55],[27,56,27,63],[27,64,27,76],[27,77,27,88],
+  [27,89,28,5],[28,6,28,13],[28,14,28,21],[28,22,28,28],[28,29,28,35],[28,36,28,43],[28,44,28,50],[28,51,28,59],
+  [28,60,28,70],[28,71,28,77],[28,78,28,84],[28,85,29,6],[29,7,29,14],[29,15,29,23],[29,24,29,30],[29,31,29,38],
+  [29,39,29,45],[29,46,29,52],[29,53,29,63],[29,64,30,5],[30,6,30,15],[30,16,30,24],[30,25,30,32],[30,33,30,41],
+  [30,42,30,50],[30,51,30,60],[31,1,31,11],[31,12,31,19],[31,20,31,28],[31,29,31,34],[32,1,32,11],[32,12,32,20],
+  [32,21,32,30],[33,1,33,6],[33,7,33,15],[33,16,33,22],[33,23,33,30],[33,31,33,35],[33,36,33,43],[33,44,33,50],
+  [33,51,33,54],[33,55,33,62],[33,63,33,73],[34,1,34,7],[34,8,34,14],[34,15,34,22],[34,23,34,31],[34,32,34,39],
+  [34,40,34,48],[34,49,35,3],[35,4,35,11],[35,12,35,18],[35,19,35,30],[35,31,35,38],[35,39,35,44],[35,45,36,12],
+  [36,13,36,27],[36,28,36,40],[36,41,36,54],[36,55,36,70],[36,71,36,83],[37,1,37,24],[37,25,37,51],[37,52,37,76],
+  [37,77,37,102],[37,103,37,126],[37,127,37,153],[37,154,37,182],[38,1,38,16],[38,17,38,26],[38,27,38,42],[38,43,38,61],
+  [38,62,38,83],[38,84,39,5],[39,6,39,10],[39,11,39,21],[39,22,39,31],[39,32,39,40],[39,41,39,47],[39,48,39,56],
+  [39,57,39,67],[39,68,39,74],[39,75,40,7],[40,8,40,16],[40,17,40,25],[40,26,40,33],[40,34,40,40],[40,41,40,49],
+  [40,50,40,58],[40,59,40,66],[40,67,40,77],[40,78,40,85],[41,1,41,11],[41,12,41,20],[41,21,41,29],[41,30,41,38],
+  [41,39,41,46],[41,47,41,54],[42,1,42,10],[42,11,42,15],[42,16,42,22],[42,23,42,31],[42,32,42,44],[42,45,42,51],
+  [42,52,43,10],[43,11,43,22],[43,23,43,33],[43,34,43,47],[43,48,43,60],[43,61,43,73],[43,74,43,89],[44,1,44,18],
+  [44,19,44,39],[44,40,44,59],[45,1,45,13],[45,14,45,22],[45,23,45,32],[45,33,46,5],[46,6,46,14],[46,15,46,20],
+  [46,21,46,28],[46,29,46,35],[47,1,47,11],[47,12,47,19],[47,20,47,29],[47,30,47,38],[48,1,48,9],[48,10,48,15],
+  [48,16,48,23],[48,24,48,28],[48,29,49,4],[49,5,49,11],[49,12,49,18],[50,1,50,15],[50,16,50,35],[50,36,51,6],
+  [51,7,51,30],[51,31,51,51],[51,52,52,14],[52,15,52,31],[52,32,52,49],[53,1,53,26],[53,27,53,44],[53,45,54,6],
+  [54,7,54,27],[54,28,54,49],[54,50,55,16],[55,17,55,40],[55,41,55,67],[55,68,56,16],[56,17,56,50],[56,51,56,76],
+  [56,77,57,3],[57,4,57,11],[57,12,57,18],[57,19,57,24],[57,25,57,29],[58,1,58,6],[58,7,58,11],[58,12,58,21],
+  [58,22,59,3],[59,4,59,9],[59,10,59,16],[59,17,59,24],[60,1,60,5],[60,6,60,11],[60,12,61,5],[61,6,61,14],
+  [62,1,62,8],[62,9,63,4],[63,5,63,11],[64,1,64,9],[64,10,64,18],[65,1,65,5],[65,6,65,12],[66,1,66,7],
+  [66,8,66,12],[67,1,67,12],[67,13,67,26],[67,27,68,15],[68,16,68,42],[68,43,69,8],[69,9,69,34],[69,35,70,10],
+  [70,11,70,39],[70,40,71,10],[71,11,71,28],[72,1,72,13],[72,14,72,28],[73,1,73,19],[73,20,74,17],[74,18,74,47],
+  [74,48,75,19],[75,20,76,5],[76,6,76,25],[76,26,77,19],[77,20,77,50],[78,1,78,30],[78,31,79,15],[79,16,79,46],
+  [80,1,80,42],[81,1,81,29],[82,1,83,6],[83,7,83,34],[83,35,84,25],[85,1,85,22],[86,1,87,15],[87,16,88,26],
+  [89,1,89,23],[89,24,90,20],[91,1,92,14],[92,15,94,8],[95,1,96,19],[97,1,98,7],[98,8,100,9],[100,10,102,8],
+  [103,1,105,5],[106,1,108,3],[109,1,111,5],[112,1,114,6]
+];
+
+// أسماء السور (0-indexed)
+const SURAH_NAMES_AR=['الفاتحة','البقرة','آل عمران','النساء','المائدة','الأنعام','الأعراف','الأنفال','التوبة','يونس','هود','يوسف','الرعد','إبراهيم','الحجر','النحل','الإسراء','الكهف','مريم','طه','الأنبياء','الحج','المؤمنون','النور','الفرقان','الشعراء','النمل','القصص','العنكبوت','الروم','لقمان','السجدة','الأحزاب','سبأ','فاطر','يس','الصافات','ص','الزمر','غافر','فصلت','الشورى','الزخرف','الدخان','الجاثية','الأحقاف','محمد','الفتح','الحجرات','ق','الذاريات','الطور','النجم','القمر','الرحمن','الواقعة','الحديد','المجادلة','الحشر','الممتحنة','الصف','الجمعة','المنافقون','التغابن','الطلاق','التحريم','الملك','القلم','الحاقة','المعارج','نوح','الجن','المزمل','المدثر','القيامة','الإنسان','المرسلات','النبأ','النازعات','عبس','التكوير','الانفطار','المطففين','الانشقاق','البروج','الطارق','الأعلى','الغاشية','الفجر','البلد','الشمس','الليل','الضحى','الشرح','التين','العلق','القدر','البينة','الزلزلة','العاديات','القارعة','التكاثر','العصر','الهمزة','الفيل','قريش','الماعون','الكوثر','الكافرون','النصر','المسد','الإخلاص','الفلق','الناس'];
+
+// صفحة → آيات (مباشرة من الجدول، دقيق 100%)
+function getPageInfo(pageNum) {
+  if (pageNum<1||pageNum>604) return null;
+  const [s1,a1,s2,a2] = PAGE_MAP[pageNum-1];
+  return { startSurah:s1, startAyah:a1, endSurah:s2, endAyah:a2,
+           startName:SURAH_NAMES_AR[s1-1], endName:SURAH_NAMES_AR[s2-1] };
+}
+
+// آية → صفحة (بحث ثنائي)
+function getPageForVerse(surahNum, ayahNum) {
+  let lo=0, hi=603;
+  while (lo<hi) {
+    const mid=(lo+hi+1)>>1;
+    const [s,a] = PAGE_MAP[mid];
+    if (s<surahNum||(s===surahNum&&a<=ayahNum)) lo=mid; else hi=mid-1;
+  }
+  return lo+1;
+}
+
+// تنسيق عرض صفحة واحدة
+function buildPageLabel(pageNum) {
+  const p = getPageInfo(pageNum);
+  if (!p) return '';
+  if (p.startSurah===p.endSurah)
+    return `<span class="ref-surah">${p.startName}</span> <span class="ref-ayah">(${p.startAyah}–${p.endAyah})</span>`;
+  return `<span class="ref-surah">${p.startName}</span> <span class="ref-ayah">${p.startAyah}</span> ↔ <span class="ref-surah">${p.endName}</span> <span class="ref-ayah">${p.endAyah}</span>`;
+}
+
+// === Surahs ===
+const surahs=[{n:"الفاتحة",a:7},{n:"البقرة",a:286},{n:"آل عمران",a:200},{n:"النساء",a:176},{n:"المائدة",a:120},{n:"الأنعام",a:165},{n:"الأعراف",a:206},{n:"الأنفال",a:75},{n:"التوبة",a:129},{n:"يونس",a:109},{n:"هود",a:123},{n:"يوسف",a:111},{n:"الرعد",a:43},{n:"إبراهيم",a:52},{n:"الحجر",a:99},{n:"النحل",a:128},{n:"الإسراء",a:111},{n:"الكهف",a:110},{n:"مريم",a:98},{n:"طه",a:135},{n:"الأنبياء",a:112},{n:"الحج",a:78},{n:"المؤمنون",a:118},{n:"النور",a:64},{n:"الفرقان",a:77},{n:"الشعراء",a:227},{n:"النمل",a:93},{n:"القصص",a:88},{n:"العنكبوت",a:69},{n:"الروم",a:60},{n:"لقمان",a:34},{n:"السجدة",a:30},{n:"الأحزاب",a:73},{n:"سبأ",a:54},{n:"فاطر",a:45},{n:"يس",a:83},{n:"الصافات",a:182},{n:"ص",a:88},{n:"الزمر",a:75},{n:"غافر",a:85},{n:"فصلت",a:54},{n:"الشورى",a:53},{n:"الزخرف",a:89},{n:"الدخان",a:59},{n:"الجاثية",a:37},{n:"الأحقاف",a:35},{n:"محمد",a:38},{n:"الفتح",a:29},{n:"الحجرات",a:18},{n:"ق",a:45},{n:"الذاريات",a:60},{n:"الطور",a:49},{n:"النجم",a:62},{n:"القمر",a:55},{n:"الرحمن",a:78},{n:"الواقعة",a:96},{n:"الحديد",a:29},{n:"المجادلة",a:22},{n:"الحشر",a:24},{n:"الممتحنة",a:13},{n:"الصف",a:14},{n:"الجمعة",a:11},{n:"المنافقون",a:11},{n:"التغابن",a:18},{n:"الطلاق",a:12},{n:"التحريم",a:12},{n:"الملك",a:30},{n:"القلم",a:52},{n:"الحاقة",a:52},{n:"المعارج",a:44},{n:"نوح",a:28},{n:"الجن",a:28},{n:"المزمل",a:20},{n:"المدثر",a:56},{n:"القيامة",a:40},{n:"الإنسان",a:31},{n:"المرسلات",a:50},{n:"النبأ",a:40},{n:"النازعات",a:46},{n:"عبس",a:42},{n:"التكوير",a:29},{n:"الانفطار",a:19},{n:"المطففين",a:36},{n:"الانشقاق",a:25},{n:"البروج",a:22},{n:"الطارق",a:17},{n:"الأعلى",a:19},{n:"الغاشية",a:26},{n:"الفجر",a:30},{n:"البلد",a:20},{n:"الشمس",a:15},{n:"الليل",a:21},{n:"الضحى",a:11},{n:"الشرح",a:8},{n:"التين",a:8},{n:"العلق",a:19},{n:"القدر",a:5},{n:"البينة",a:8},{n:"الزلزلة",a:8},{n:"العاديات",a:11},{n:"القارعة",a:11},{n:"التكاثر",a:8},{n:"العصر",a:3},{n:"الهمزة",a:9},{n:"الفيل",a:5},{n:"قريش",a:4},{n:"الماعون",a:7},{n:"الكوثر",a:3},{n:"الكافرون",a:6},{n:"النصر",a:3},{n:"المسد",a:5},{n:"الإخلاص",a:4},{n:"الفلق",a:5},{n:"الناس",a:6}];
+const TOTAL=6236, KEY='quran_tracker_pwa_v2';
+let currentType='new', currentQuality='weak';
+// Track the current recording unit (ayah or page). Default is ayah
+let currentUnit='ayah';
+let editingId = null; // null = إضافة جديدة، رقم = وضع التعديل
+
+// === Navigation ===
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// === Init ===
+async function init() {
+  const sel = document.getElementById('surahSelect');
+  surahs.forEach((s, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = `${i+1}. ${s.n} (${s.a} آية)`;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => {
+    const s = surahs[sel.value];
+    document.getElementById('toAyah').max = s.a;
+    document.getElementById('fromAyah').max = s.a;
+    updateAyahRef();
+  });
+  document.getElementById('entryDate').valueAsDate = new Date();
+  ['fromAyah','toAyah'].forEach(id => document.getElementById(id).addEventListener('input', updateAyahRef));
+  ['fromPage','toPage'].forEach(id => document.getElementById(id).addEventListener('input', updatePageRef));
+  await migrateFromLocalStorage();
+  await loadAll();
+}
+
+// === Storage Engine: IndexedDB (primary) + localStorage (backup) ===
+const IDB_NAME = 'QuranTrackerDB';
+const IDB_STORE = 'kv';
+const IDB_KEY = 'quran_data';
+let _idb = null;
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    if (_idb) { resolve(_idb); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => { e.target.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getData() {
+  try {
+    const db = await openIDB();
+    const raw = await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return raw.map(e => { if (!e.unit) e.unit = 'ayah'; return e; });
+  } catch {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY)) || [];
+      return raw.map(e => { if (!e.unit) e.unit = 'ayah'; return e; });
+    } catch { return []; }
+  }
+}
+
+async function saveData(d) {
+  try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {}
+  try {
+    const db = await openIDB();
+    await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(d, IDB_KEY);
+      req.onsuccess = resolve;
+      req.onerror = () => reject(req.error);
+    });
+  } catch(err) { console.warn('IDB save failed:', err); }
+}
+
+async function migrateFromLocalStorage() {
+  try {
+    const db = await openIDB();
+    const existing = await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (!existing || existing.length === 0) {
+      const lsData = JSON.parse(localStorage.getItem(KEY) || '[]');
+      if (lsData.length > 0) {
+        await saveData(lsData);
+        showToast('✅ تم نقل البيانات بنجاح');
+      }
+    }
+  } catch(err) { console.warn('Migration failed:', err); }
+}
+
+function setEntryType(type) {
+  currentType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('saveBtn');
+  const qs = document.getElementById('qualitySection');
+  if (type === 'new') {
+    document.querySelector('.new-btn').classList.add('active');
+    btn.className = 'btn-save new-save'; btn.innerHTML = '💾 حفظ سجل الحفظ'; qs.classList.remove('show');
+  } else {
+    document.querySelector('.review-btn').classList.add('active');
+    btn.className = 'btn-save review-save'; btn.innerHTML = '💾 حفظ سجل المراجعة'; qs.classList.add('show');
+  }
+}
+
+// === Unit Selection ===
+function setUnitType(type) {
+  currentUnit = type;
+  document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+  if (type === 'ayah') {
+    document.querySelector('.ayah-btn').classList.add('active');
+    document.getElementById('ayahFields').style.display = 'grid';
+    document.getElementById('pageFields').style.display = 'none';
+    document.getElementById('pageAyahInfo').style.display = 'none';
+    updateAyahRef();
+  } else {
+    document.querySelector('.page-btn').classList.add('active');
+    document.getElementById('ayahFields').style.display = 'none';
+    document.getElementById('pageFields').style.display = 'grid';
+    document.getElementById('ayahPageInfo').style.display = 'none';
+    updatePageRef();
+  }
+}
+
+// آية → صفحة
+function updateAyahRef() {
+  const si = parseInt(document.getElementById('surahSelect').value) + 1;
+  const fa = parseInt(document.getElementById('fromAyah').value);
+  const ta = parseInt(document.getElementById('toAyah').value);
+  const div = document.getElementById('ayahPageInfo');
+  const body = document.getElementById('ayahPageBody');
+  if (isNaN(si)||isNaN(fa)||fa<1){div.style.display='none';return;}
+  const fp = getPageForVerse(si, fa);
+  const tp = (!isNaN(ta)&&ta>fa) ? getPageForVerse(si,ta) : fp;
+  body.innerHTML = fp===tp
+    ? `الصفحة: <span class="ref-ayah">${fp}</span>`
+    : `الصفحات: <span class="ref-ayah">${fp} – ${tp}</span>`;
+  div.style.display = 'block';
+}
+
+// صفحة → آية (دقيق 100% من الجدول)
+function updatePageRef() {
+  const fp = parseInt(document.getElementById('fromPage').value);
+  const tp = parseInt(document.getElementById('toPage').value);
+  const div = document.getElementById('pageAyahInfo');
+  const body = document.getElementById('pageAyahBody');
+  if (isNaN(fp)||fp<1||fp>604){div.style.display='none';return;}
+  const vtp = (!isNaN(tp)&&tp>=fp&&tp<=604) ? tp : fp;
+  body.innerHTML = fp===vtp
+    ? buildPageLabel(fp)
+    : `ص${fp}: ${buildPageLabel(fp)} &nbsp;↔&nbsp; ص${vtp}: ${buildPageLabel(vtp)}`;
+  div.style.display = 'block';
+}
+
+function setQuality(q, btn) {
+  currentQuality = q;
+  document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function saveEntry() {
+  const si = parseInt(document.getElementById('surahSelect').value);
+  let from, to;
+  // Determine from and to values based on current unit
+  if (currentUnit === 'ayah') {
+    from = parseInt(document.getElementById('fromAyah').value);
+    to = parseInt(document.getElementById('toAyah').value);
+  } else {
+    from = parseInt(document.getElementById('fromPage').value);
+    to = parseInt(document.getElementById('toPage').value);
+  }
+  const date = document.getElementById('entryDate').value;
+  const notes = document.getElementById('notes').value.trim();
+
+  // Validate required fields
+  if (!date || isNaN(from) || isNaN(to)) return showToast('⚠️ يرجى ملء الحقول المطلوبة');
+  if (from > to) {
+    const unitLabel = currentUnit === 'ayah' ? 'آية' : 'صفحة';
+    return showToast(`⚠️ ${unitLabel} البداية أكبر من النهاية`);
+  }
+  // Validate ayah max against selected surah
+  if (currentUnit === 'ayah' && to > surahs[si].a) {
+    return showToast(`⚠️ السورة ${surahs[si].a} آية فقط`);
+  }
+  // Validate page max (Quran has 604 pages)
+  if (currentUnit === 'page' && to > 604) {
+    return showToast('⚠️ المصحف 604 صفحة فقط');
+  }
+
+  const count = to - from + 1;
+  const entry = {
+    id: Date.now(), type: currentType, unit: currentUnit,
+    surahIdx: si, surahName: surahs[si].n,
+    from, to, count, date, notes,
+    quality: currentType === 'review' ? currentQuality : null
+  };
+  // المرجع التقاطعي - دقيق من الجدول
+  if (currentUnit === 'page') {
+    const pf = getPageInfo(from);
+    const pt = getPageInfo(to);
+    if (pf) {
+      entry.refStartSurah = pf.startName;
+      entry.refStartAyah  = pf.startAyah;
+      entry.refEndSurah   = pt ? pt.endName : pf.endName;
+      entry.refEndAyah    = pt ? pt.endAyah : pf.endAyah;
+    }
+  } else {
+    entry.refFromPage = getPageForVerse(si+1, from);
+    entry.refToPage   = getPageForVerse(si+1, to);
+  }
+  const data = await getData();
+  const lbl = currentType === 'new' ? 'حفظ' : 'مراجعة';
+  const unitLabel = currentUnit === 'ayah' ? 'آية' : 'صفحة';
+
+  if (editingId !== null) {
+    // وضع التعديل: استبدال السجل القديم
+    entry.id = editingId;
+    const idx = data.findIndex(e => e.id === editingId);
+    if (idx !== -1) data[idx] = entry; else data.push(entry);
+    await saveData(data);
+    await loadAll();
+    showToast(`✅ تم تعديل السجل — ${entry.surahName}`);
+    cancelEdit();
+  } else {
+    // إضافة جديدة
+    data.push(entry);
+    await saveData(data);
+    await loadAll();
+    showToast(`✅ ${lbl} ${count} ${unitLabel} — ${entry.surahName}`);
+    if (currentUnit === 'ayah') {
+      document.getElementById('fromAyah').value = 1;
+      document.getElementById('toAyah').value = 5;
+    } else {
+      document.getElementById('fromPage').value = 1;
+      document.getElementById('toPage').value = 1;
+    }
+    document.getElementById('notes').value = '';
+  }
+}
+
+async function editEntry(id) {
+  const data = await getData();
+  const e = data.find(d => d.id === id);
+  if (!e) return;
+
+  editingId = id;
+
+  // الانتقال لصفحة التسجيل
+  const addNavBtn = document.querySelector('.nav-btn:nth-child(2)');
+  showPage('pageAdd', addNavBtn);
+
+  // إظهار شريط وضع التعديل
+  const banner = document.getElementById('editBanner');
+  banner.classList.add('show');
+  const typeLabel = e.type === 'new' ? 'حفظ' : 'مراجعة';
+  const unitLabel = e.unit === 'page' ? 'صفحة' : 'آية';
+  document.getElementById('editBannerText').textContent =
+    `تعديل سجل ${typeLabel} — ${e.surahName} (${e.from}–${e.to}) ${e.count} ${unitLabel}`;
+  document.getElementById('formTitle').textContent = '✏️ تعديل السجل';
+
+  // ملء بيانات النوع
+  setEntryType(e.type);
+
+  // وحدة القياس
+  setUnitType(e.unit || 'ayah');
+
+  // السورة
+  const sel = document.getElementById('surahSelect');
+  sel.value = e.surahIdx;
+  sel.dispatchEvent(new Event('change'));
+
+  // الآيات / الصفحات
+  if (e.unit === 'page') {
+    document.getElementById('fromPage').value = e.from;
+    document.getElementById('toPage').value = e.to;
+    updatePageRef();
+  } else {
+    document.getElementById('fromAyah').value = e.from;
+    document.getElementById('toAyah').value = e.to;
+    updateAyahRef();
+  }
+
+  // التاريخ والملاحظات
+  document.getElementById('entryDate').value = e.date;
+  document.getElementById('notes').value = e.notes || '';
+
+  // الجودة
+  if (e.type === 'review' && e.quality) {
+    currentQuality = e.quality;
+    document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+    const qualityMap = { excellent: 0, good: 1, fair: 2, weak: 3 };
+    const qBtns = document.querySelectorAll('.quality-btn');
+    const idx = qualityMap[e.quality];
+    if (qBtns[idx]) qBtns[idx].classList.add('active');
+  }
+
+  // تحديث نص زر الحفظ
+  const btn = document.getElementById('saveBtn');
+  btn.innerHTML = '💾 حفظ التعديلات';
+}
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('editBanner').classList.remove('show');
+  document.getElementById('formTitle').textContent = '📝 تسجيل جديد';
+  document.getElementById('saveBtn').innerHTML = '💾 حفظ السجل';
+
+  // إعادة ضبط النموذج
+  setEntryType('new');
+  setUnitType('ayah');
+  document.getElementById('surahSelect').value = 0;
+  document.getElementById('surahSelect').dispatchEvent(new Event('change'));
+  document.getElementById('fromAyah').value = 1;
+  document.getElementById('toAyah').value = 5;
+  document.getElementById('entryDate').valueAsDate = new Date();
+  document.getElementById('notes').value = '';
+  document.getElementById('ayahPageInfo').style.display = 'none';
+}
+
+async function deleteEntry(id) {
+  if (!confirm('حذف هذا السجل؟')) return;
+  const d = await getData();
+  await saveData(d.filter(e => e.id !== id));
+  await loadAll(); showToast('🗑️ تم الحذف');
+}
+
+// === Load All ===
+async function loadAll() {
+  const d = await getData();
+  updateStats(d);
+  updateProgress(d);
+  updateWeekly(d);
+  updateMonthly(d);
+  updateYearly(d);
+  displayHistory(d, 'all');
+  checkAlert(d);
+}
+
+function updateStats(data) {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const ws = new Date(now); const dy = ws.getDay(); ws.setDate(ws.getDate() - (dy >= 6 ? dy - 6 : dy + 1)); ws.setHours(0,0,0,0);
+  const ms = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+
+  const td = data.filter(e => e.date === today);
+  const wd = data.filter(e => new Date(e.date) >= ws);
+  const md = data.filter(e => e.date >= ms);
+
+  const s = (a,t) => a.filter(e=>e.type===t).reduce((s,e)=>s+e.count,0);
+  anim('todayNew',s(td,'new')); anim('todayReview',s(td,'review'));
+  anim('weekNew',s(wd,'new')); anim('weekReview',s(wd,'review'));
+  anim('monthNew',s(md,'new')); anim('monthReview',s(md,'review'));
+  anim('streakCount',calcStreak(data));
+}
+
+function calcStreak(data) {
+  if (!data.length) return 0;
+  const dates = [...new Set(data.map(e=>e.date))].sort().reverse();
+  const today = new Date().toISOString().split('T')[0];
+  if (dates[0]!==today) { const y=new Date();y.setDate(y.getDate()-1); if(dates[0]!==y.toISOString().split('T')[0]) return 0; }
+  let s=1;
+  for(let i=1;i<dates.length;i++){if((new Date(dates[i-1])-new Date(dates[i]))/864e5===1)s++;else break;}
+  return s;
+}
+
+function anim(id,target) {
+  const el=document.getElementById(id); if(!el)return;
+  const cur=parseInt(el.textContent)||0; if(cur===target)return;
+  const steps=20,inc=(target-cur)/steps; let step=0;
+  const t=setInterval(()=>{step++;el.textContent=Math.round(cur+inc*step);if(step>=steps){el.textContent=target;clearInterval(t);}},25);
+}
+
+function updateProgress(data) {
+  const nt = data.filter(e=>e.type==='new').reduce((s,e)=>s+e.count,0);
+  const rt = data.filter(e=>e.type==='review').reduce((s,e)=>s+e.count,0);
+  const np = Math.min((nt/TOTAL)*100,100);
+  const rp = Math.min((rt/TOTAL)*100,100);
+
+  document.getElementById('ringNew').style.strokeDashoffset = 503-(np/100)*503;
+  document.getElementById('ringReview').style.strokeDashoffset = 440-(rp/100)*440;
+  document.getElementById('progressPercent').textContent = np.toFixed(1)+'%';
+  document.getElementById('totalMemorized').textContent = nt;
+  document.getElementById('totalReviewed').textContent = rt;
+
+  const ad = new Set(data.map(e=>e.date)).size;
+  document.getElementById('daysActive').textContent = ad;
+  document.getElementById('avgPerDay').textContent = ad>0?(nt/ad).toFixed(1):0;
+
+  const rv=data.filter(e=>e.type==='review');
+  document.getElementById('excellentCount').textContent=rv.filter(e=>e.quality==='excellent').reduce((s,e)=>s+e.count,0);
+  document.getElementById('goodCount').textContent=rv.filter(e=>e.quality==='good').reduce((s,e)=>s+e.count,0);
+  document.getElementById('weakCount').textContent=rv.filter(e=>e.quality==='weak'||e.quality==='fair').reduce((s,e)=>s+e.count,0);
+}
+
+function checkAlert(data) {
+  const ne=data.filter(e=>e.type==='new');
+  const el=document.getElementById('reviewAlert');
+  if(!ne.length){el.classList.remove('show');return;}
+  const d3=new Date();d3.setDate(d3.getDate()-3);
+  const rr=data.filter(e=>e.type==='review'&&e.date>=d3.toISOString().split('T')[0]).reduce((s,e)=>s+e.count,0);
+  const tn=ne.reduce((s,e)=>s+e.count,0);
+  if(tn>20&&rr<tn*0.3){
+    el.classList.add('show');
+    document.getElementById('reviewAlertText').textContent=`لديك ${tn} آية محفوظة. يُنصح بمراجعة ${Math.ceil(tn*0.3)} آية على الأقل كل 3 أيام`;
+  } else el.classList.remove('show');
+}
+
+function updateWeekly(data) {
+  const c=document.getElementById('weeklyChart');
+  const dn=['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+  const today=new Date(),ts=today.toISOString().split('T')[0];
+  const wd=[];
+  for(let i=6;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const ds=d.toISOString().split('T')[0];const de=data.filter(e=>e.date===ds);wd.push({label:dn[d.getDay()],nc:de.filter(e=>e.type==='new').reduce((s,e)=>s+e.count,0),rc:de.filter(e=>e.type==='review').reduce((s,e)=>s+e.count,0),t:ds===ts});}
+  const mx=Math.max(...wd.flatMap(d=>[d.nc,d.rc]),1);
+  c.innerHTML=wd.map(d=>{const hn=Math.max((d.nc/mx)*120,3),hr=Math.max((d.rc/mx)*120,3);return`<div class="chart-bar-group"><div class="chart-value">${d.nc?`<span class="cv-new">${d.nc}</span>`:''}${d.rc?`<span class="cv-review">${d.rc}</span>`:''}</div><div class="chart-bars"><div class="chart-bar bar-new" style="height:${d.nc?hn:3}px;opacity:${d.nc?1:.2}"></div><div class="chart-bar bar-review" style="height:${d.rc?hr:3}px;opacity:${d.rc?1:.2}"></div></div><div class="chart-label">${d.label}</div></div>`;}).join('');
+}
+
+function updateMonthly(data) {
+  const c=document.getElementById('monthlyChart');
+  const today=new Date();
+  const wk=[];
+  for(let w=3;w>=0;w--){const we=new Date(today);we.setDate(we.getDate()-w*7);const ws=new Date(we);ws.setDate(ws.getDate()-6);const en=data.filter(e=>{const d=new Date(e.date);return d>=ws&&d<=we;});wk.push({label:`أسبوع ${4-w}`,nc:en.filter(e=>e.type==='new').reduce((s,e)=>s+e.count,0),rc:en.filter(e=>e.type==='review').reduce((s,e)=>s+e.count,0)});}
+  const mx=Math.max(...wk.flatMap(d=>[d.nc,d.rc]),1);
+  c.innerHTML=wk.map(d=>{const hn=Math.max((d.nc/mx)*100,3),hr=Math.max((d.rc/mx)*100,3);return`<div class="chart-bar-group"><div class="chart-value">${d.nc?`<span class="cv-new">${d.nc}</span>`:''}${d.rc?`<span class="cv-review">${d.rc}</span>`:''}</div><div class="chart-bars"><div class="chart-bar bar-new" style="height:${d.nc?hn:3}px;opacity:${d.nc?1:.2}"></div><div class="chart-bar bar-review" style="height:${d.rc?hr:3}px;opacity:${d.rc?1:.2}"></div></div><div class="chart-label">${d.label}</div></div>`;}).join('');
+}
+
+// === Yearly Chart ===
+// يستخرج هذا الدالة إحصائيات الحفظ والمراجعة لكل شهر من آخر 12 شهراً ويعرضها في مخطط عمودي
+function updateYearly(data) {
+  const c = document.getElementById('yearlyChart');
+  if (!c) return;
+  // أسماء الأشهر بالعربية
+  const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const now = new Date();
+  const months = [];
+  // جمع بيانات 12 شهراً سابقة بما في ذلك الشهر الحالي
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    // تصفية السجلات ضمن هذا الشهر
+    const monthData = data.filter(e => {
+      const ed = new Date(e.date);
+      return ed >= start && ed <= end;
+    });
+    const nc = monthData.filter(e => e.type === 'new').reduce((s, e) => s + e.count, 0);
+    const rc = monthData.filter(e => e.type === 'review').reduce((s, e) => s + e.count, 0);
+    months.push({ label: monthNames[date.getMonth()] || ('شهر ' + (date.getMonth() + 1)), nc, rc });
+  }
+  // حساب القيمة القصوى لأجل مقياس الأعمدة
+  const mx = Math.max(...months.flatMap(d => [d.nc, d.rc]), 1);
+  // توليد عناصر HTML للمخطط
+  c.innerHTML = months.map(d => {
+    const hn = Math.max((d.nc / mx) * 120, 3);
+    const hr = Math.max((d.rc / mx) * 120, 3);
+    return `<div class="chart-bar-group"><div class="chart-value">${d.nc ? `<span class=\"cv-new\">${d.nc}</span>` : ''}${d.rc ? `<span class=\"cv-review\">${d.rc}</span>` : ''}</div><div class="chart-bars"><div class="chart-bar bar-new" style="height:${d.nc ? hn : 3}px;opacity:${d.nc ? 1 : .2}"></div><div class="chart-bar bar-review" style="height:${d.rc ? hr : 3}px;opacity:${d.rc ? 1 : .2}"></div></div><div class="chart-label">${d.label}</div></div>`;
+  }).join('');
+}
+
+function displayHistory(data, filter) {
+  const c=document.getElementById('historyList');
+  let f=[...data];const today=new Date().toISOString().split('T')[0],now=new Date();
+  if(filter==='today')f=f.filter(e=>e.date===today);
+  else if(filter==='week'){const w=new Date(now);w.setDate(w.getDate()-7);f=f.filter(e=>new Date(e.date)>=w);}
+  else if(filter==='month'){const m=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;f=f.filter(e=>e.date>=m);}
+  else if(filter==='new-only')f=f.filter(e=>e.type==='new');
+  else if(filter==='review-only')f=f.filter(e=>e.type==='review');
+
+  f.sort((a,b)=>new Date(b.date)-new Date(a.date)||b.id-a.id);
+  if(!f.length){c.innerHTML='<div class="empty-state"><span>📖</span><p>لا توجد سجلات</p></div>';return;}
+
+  const qe={excellent:'⭐',good:'👍',fair:'📝',weak:'🔁'};
+  c.innerHTML=f.map(e=>{
+    const df=new Date(e.date).toLocaleDateString('ar-SA',{day:'numeric',month:'short'});
+    const isN=e.type==='new';
+    const q=!isN&&e.quality?`<span class="h-quality">${qe[e.quality]||''}</span>`:'';
+    const unitLabel = e.unit==='page'?'صفحة':'آية';
+    let refBadge = '';
+    if (e.unit==='page' && e.refStartSurah) {
+      const rng = e.refStartSurah===e.refEndSurah
+        ? `${e.refStartSurah} ${e.refStartAyah}–${e.refEndAyah}`
+        : `${e.refStartSurah}${e.refStartAyah} ↔ ${e.refEndSurah}${e.refEndAyah}`;
+      refBadge = `<span class="h-ref">📑 ${rng}</span>`;
+    } else if (e.unit==='ayah' && e.refFromPage) {
+      const pg = e.refFromPage===e.refToPage ? `ص${e.refFromPage}` : `ص${e.refFromPage}–${e.refToPage}`;
+      refBadge = `<span class="h-ref">📄 ${pg}</span>`;
+    }
+    return`<div class="history-item"><span class="h-badge ${isN?'badge-new':'badge-review'}">${isN?'حفظ':'مراجعة'}</span><div class="h-content"><div class="h-surah">${e.surahName} (${e.from}-${e.to})</div><div class="h-date">${df} ${refBadge}</div></div>${q}<span class="h-ayat ${isN?'new-a':'review-a'}">${e.count} ${unitLabel}</span><button class="h-edit" onclick="editEntry(${e.id})" title="تعديل">✏️</button><button class="h-del" onclick="deleteEntry(${e.id})" title="حذف">✕</button></div>`;
+  }).join('');
+}
+
+async function filterHistory(f,btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');displayHistory(await getData(),f);}
+
+// === Import/Export ===
+async function exportData(){const d=await getData();if(!d.length)return showToast('⚠️ لا توجد بيانات');const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`quran_${new Date().toISOString().split('T')[0]}.json`;a.click();showToast('✅ تم التصدير');}
+function importData(){document.getElementById('importFile').click();}
+function handleImport(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const im=JSON.parse(ev.target.result);if(!Array.isArray(im))throw 0;im.forEach(e=>{if(!e.type)e.type='new';});const existing=await getData();await saveData([...existing,...im]);await loadAll();showToast(`✅ تم استيراد ${im.length} سجل`);}catch{showToast('⚠️ ملف غير صالح');}};r.readAsText(f);e.target.value='';}
+async function clearAllData(){
+  if(!confirm('⚠️ حذف جميع البيانات نهائياً؟'))return;
+  localStorage.removeItem(KEY);
+  try {
+    const db = await openIDB();
+    await new Promise((resolve,reject)=>{
+      const req = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).delete(IDB_KEY);
+      req.onsuccess=resolve; req.onerror=()=>reject(req.error);
+    });
+  } catch(err){console.warn('IDB clear failed:',err);}
+  await loadAll(); showToast('🗑️ تم المسح');
+}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// === PWA Install ===
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') showToast('✅ تم تثبيت التطبيق!');
+      deferredPrompt = null;
+      document.getElementById('installBanner').classList.remove('show');
+    });
+  }
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').classList.remove('show');
+}
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+}
+
+init();
+</script>
 </body>
 </html>
