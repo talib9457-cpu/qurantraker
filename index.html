@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#D4A843">
 <meta name="description" content="تطبيق لتتبع حفظ ومراجعة القرآن الكريم">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>متتبع حفظ القرآن الكريم</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
@@ -624,6 +625,12 @@ input[type="date"] { color-scheme: dark; }
 <body>
 
 <div class="app">
+  <!-- Install Banner -->
+  <div class="install-banner" id="installBanner">
+    <div class="install-banner-text">
+      <strong>📲 تثبيت التطبيق</strong>
+      <p>أضف التطبيق للشاشة الرئيسية للوصول السريع</p>
+    </div>
     <button class="install-btn" id="installBtn" onclick="installApp()">تثبيت</button>
     <button class="install-dismiss" onclick="dismissInstall()">✕</button>
   </div>
@@ -631,12 +638,6 @@ input[type="date"] { color-scheme: dark; }
   <header class="header">
     <h1>متتبع حفظ القرآن</h1>
     <p>حفظ ومراجعة كتاب الله</p>
-    <div id="syncBadge" style="display:inline-flex;align-items:center;gap:6px;
-      margin-top:6px;padding:4px 12px;border-radius:20px;
-      background:rgba(255,255,255,0.07);font-size:0.78rem;color:#8B9AB5;">
-      <span id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#4a5568;"></span>
-      <span id="syncTxt">جاري الاتصال...</span>
-    </div>
   </header>
   <div class="divider"><span>✦</span></div>
 
@@ -874,15 +875,8 @@ input[type="date"] { color-scheme: dark; }
         </div>
         <button class="btn-setting danger" onclick="clearAllData()">مسح</button>
       </div>
-      <div class="setting-item">
-        <div>
-          <div class="setting-label">🔑 رمز المزامنة</div>
-          <div class="setting-desc" id="pinDisplay">رمزك: 1234</div>
-        </div>
-        <button class="btn-setting" onclick="changePinPrompt()">تغيير</button>
-      </div>
     </div>
-    <div class="app-version">متتبع حفظ القرآن الكريم — الإصدار 5.0 ☁️</div>
+    <div class="app-version">متتبع حفظ القرآن الكريم — الإصدار 2.0</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
   </div>
 </div>
@@ -1049,116 +1043,71 @@ async function init() {
   document.getElementById('entryDate').valueAsDate = new Date();
   ['fromAyah','toAyah'].forEach(id => document.getElementById(id).addEventListener('input', updateAyahRef));
   ['fromPage','toPage'].forEach(id => document.getElementById(id).addEventListener('input', updatePageRef));
-
-  // استعادة الرمز — إذا ما في رمز محفوظ استخدم الافتراضي
-  const saved = pinLoad();
-  _userPin = saved || '1234';
-  pinSave(_userPin);
-  const pd = document.getElementById('pinDisplay');
-  if (pd) pd.textContent = 'رمزك: ' + _userPin;
-
   await migrateFromLocalStorage();
   await loadAll();
 }
 
-// ═══════════════════════════════════════════════════
-//  محرك التخزين السحابي — jsonstore.io (جاهز تلقائياً)
-//  لا يحتاج أي إعداد — يعمل فور تثبيت التطبيق
-// ═══════════════════════════════════════════════════
-const JS_TOKEN = 'talib_quran_7d3f9a2c8e1b4f6d0a5c3e8b2f4a7c9d1e6b3f5a8c2d4e7b0f3a6c9d2e5b8f1';
-const JS_BASE  = 'https://www.jsonstore.io/' + JS_TOKEN;
-let _userPin = null;
+// === Storage Engine: IndexedDB (primary) + localStorage (backup) ===
+const IDB_NAME = 'QuranTrackerDB';
+const IDB_STORE = 'kv';
+const IDB_KEY = 'quran_data';
+let _idb = null;
 
-// ── استعادة الـ PIN من كل مكان ممكن ──
-function pinLoad() {
-  let p = null;
-  try { p = localStorage.getItem('__qpin__'); } catch {}
-  if (!p) { try { p = sessionStorage.getItem('__qpin__'); } catch {} }
-  return (p && p.length >= 4) ? p : null;
-}
-function pinSave(p) {
-  try { localStorage.setItem('__qpin__', p); } catch {}
-  try { sessionStorage.setItem('__qpin__', p); } catch {}
-}
-
-// ── jsonstore.io REST helpers ──
-async function jsGet(pin) {
-  const r = await fetch(JS_BASE + '/' + pin, {method:'GET'});
-  if (!r.ok) throw new Error('GET ' + r.status);
-  const j = await r.json();
-  return j.result || [];
-}
-async function jsPut(pin, data) {
-  const r = await fetch(JS_BASE + '/' + pin, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(data)
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    if (_idb) { resolve(_idb); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => { e.target.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+    req.onerror = () => reject(req.error);
   });
-  if (!r.ok) throw new Error('PUT ' + r.status);
-}
-async function jsDel(pin) {
-  await fetch(JS_BASE + '/' + pin, {method:'DELETE'});
 }
 
-// ── حالة الاتصال ──
-function setSyncUI(ok, msg) {
-  const dot = document.getElementById('syncDot');
-  const txt = document.getElementById('syncTxt');
-  if (dot) dot.style.background = ok ? '#2DD4A8' : (ok===null ? '#D4A843' : '#ef4444');
-  if (txt) txt.textContent = msg;
-}
-
-// ── getData ──
 async function getData() {
-  if (!_userPin) return [];
-  setSyncUI(null, 'جاري التحميل...');
   try {
-    const data = await jsGet(_userPin);
-    setSyncUI(true, '☁️ متزامن');
-    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {}
-    return Array.isArray(data) ? data.map(e=>{if(!e.unit)e.unit='ayah';return e;}) : [];
-  } catch(e) {
-    console.warn('cloud read failed:', e);
-    setSyncUI(false, '⚠️ بدون إنترنت');
+    const db = await openIDB();
+    const raw = await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+    return raw.map(e => { if (!e.unit) e.unit = 'ayah'; return e; });
+  } catch {
     try {
-      const c = JSON.parse(localStorage.getItem(KEY)||'[]');
-      return c.map(e=>{if(!e.unit)e.unit='ayah';return e;});
+      const raw = JSON.parse(localStorage.getItem(KEY)) || [];
+      return raw.map(e => { if (!e.unit) e.unit = 'ayah'; return e; });
     } catch { return []; }
   }
 }
 
-// ── saveData ──
-async function saveData(data) {
-  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {}
-  if (!_userPin) return;
+async function saveData(d) {
+  try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {}
   try {
-    await jsPut(_userPin, data);
-    setSyncUI(true, '☁️ محفوظ');
-  } catch(e) {
-    console.warn('cloud save failed:', e);
-    setSyncUI(false, '⚠️ حُفظ محلياً');
-  }
-}
-
-// ── تغيير الرمز ──
-function changePinPrompt() {
-  const p = prompt('أدخل رمزاً جديداً (4 أرقام أو أكثر):');
-  if (!p || p.replace(/\D/g,'').length < 4) { alert('الرمز يجب أن يكون 4 أرقام على الأقل'); return; }
-  const np = p.replace(/\D/g,'');
-  _userPin = np; pinSave(np);
-  const d = document.getElementById('pinDisplay');
-  if (d) d.textContent = 'رمزك: ' + np;
-  loadAll(); showToast('✅ تم تغيير الرمز');
+    const db = await openIDB();
+    await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(d, IDB_KEY);
+      req.onsuccess = resolve;
+      req.onerror = () => reject(req.error);
+    });
+  } catch(err) { console.warn('IDB save failed:', err); }
 }
 
 async function migrateFromLocalStorage() {
-  // ترحيل البيانات القديمة إلى السحابة إن وجدت
   try {
-    const cloud = await jsGet(_userPin);
-    if (cloud && cloud.length > 0) return;
-    const local = JSON.parse(localStorage.getItem(KEY)||'[]');
-    if (local.length > 0) { await jsPut(_userPin, local); showToast('✅ تم نقل بياناتك للسحابة'); }
-  } catch {}
+    const db = await openIDB();
+    const existing = await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (!existing || existing.length === 0) {
+      const lsData = JSON.parse(localStorage.getItem(KEY) || '[]');
+      if (lsData.length > 0) {
+        await saveData(lsData);
+        showToast('✅ تم نقل البيانات بنجاح');
+      }
+    }
+  } catch(err) { console.warn('Migration failed:', err); }
 }
 
 function setEntryType(type) {
@@ -1569,14 +1518,44 @@ function importData(){document.getElementById('importFile').click();}
 function handleImport(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const im=JSON.parse(ev.target.result);if(!Array.isArray(im))throw 0;im.forEach(e=>{if(!e.type)e.type='new';});const existing=await getData();await saveData([...existing,...im]);await loadAll();showToast(`✅ تم استيراد ${im.length} سجل`);}catch{showToast('⚠️ ملف غير صالح');}};r.readAsText(f);e.target.value='';}
 async function clearAllData(){
   if(!confirm('⚠️ حذف جميع البيانات نهائياً؟'))return;
-  try { localStorage.removeItem(KEY); } catch {}
-  if (_userPin) { try { await jsDel(_userPin); } catch(e){console.warn(e);} }
+  localStorage.removeItem(KEY);
+  try {
+    const db = await openIDB();
+    await new Promise((resolve,reject)=>{
+      const req = db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).delete(IDB_KEY);
+      req.onsuccess=resolve; req.onerror=()=>reject(req.error);
+    });
+  } catch(err){console.warn('IDB clear failed:',err);}
   await loadAll(); showToast('🗑️ تم المسح');
 }
-function showToast(m){
-  const t=document.getElementById('toast');
-  t.textContent=m; t.classList.add('show');
-  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3000);
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+// === PWA Install ===
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') showToast('✅ تم تثبيت التطبيق!');
+      deferredPrompt = null;
+      document.getElementById('installBanner').classList.remove('show');
+    });
+  }
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').classList.remove('show');
+}
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
 }
 
 init();
